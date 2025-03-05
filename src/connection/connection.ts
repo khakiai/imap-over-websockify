@@ -163,7 +163,7 @@ export default class Connection extends EventEmitter {
 	public lexer: Lexer;
 	public parser: Parser;
 
-	private debug: (msg: string) => void;
+	private debug: Function;
 	private box: undefined | IBox;
 	private caps: undefined | CapabilityList;
 	private config: IConfig;
@@ -258,7 +258,7 @@ export default class Connection extends EventEmitter {
 			}
 			this.state = "connected";
 			this.debug("[connection] Connected to host");
-			this.tmrAuth = setTimeout(function () {
+			this.tmrAuth = setTimeout(() => {
 				const err = new IMAPError(
 					"Timed out while authenticating with server",
 				);
@@ -269,6 +269,7 @@ export default class Connection extends EventEmitter {
 		};
 
 		if (config.tls) {
+			this.debug("[connection] using implicit TLS");
 			this.sock = tls.connect(tlsOptions, onconnect);
 		} else {
 			socket.once("connect", onconnect);
@@ -350,7 +351,7 @@ export default class Connection extends EventEmitter {
 		const parser = new Parser();
 		this.parser = parser;
 
-		socket.pipe(newlineTransform).pipe(lexer).pipe(parser);
+		this.sock.pipe(newlineTransform).pipe(lexer).pipe(parser);
 
 		parser.on("untagged", (resp: UntaggedResponse) => {
 			this.resUntagged(resp);
