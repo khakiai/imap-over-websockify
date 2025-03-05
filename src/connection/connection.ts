@@ -163,7 +163,7 @@ export default class Connection extends EventEmitter {
 	public lexer: Lexer;
 	public parser: Parser;
 
-	private debug: (msg: string) => void;
+	private debug: Function;
 	private box: undefined | IBox;
 	private caps: undefined | CapabilityList;
 	private config: IConfig;
@@ -224,6 +224,7 @@ export default class Connection extends EventEmitter {
 	}
 
 	public connect() {
+		this.debug("imap connect()");
 		const config = this.config;
 		let socket: Socket;
 		let tlsOptions: tls.ConnectionOptions;
@@ -258,7 +259,7 @@ export default class Connection extends EventEmitter {
 			}
 			this.state = "connected";
 			this.debug("[connection] Connected to host");
-			this.tmrAuth = setTimeout(function () {
+			this.tmrAuth = setTimeout(() => {
 				const err = new IMAPError(
 					"Timed out while authenticating with server",
 				);
@@ -269,6 +270,7 @@ export default class Connection extends EventEmitter {
 		};
 
 		if (config.tls) {
+			this.debug("connect using implicit TLS");
 			this.sock = tls.connect(tlsOptions, onconnect);
 		} else {
 			socket.once("connect", onconnect);
@@ -350,7 +352,8 @@ export default class Connection extends EventEmitter {
 		const parser = new Parser();
 		this.parser = parser;
 
-		socket.pipe(newlineTransform).pipe(lexer).pipe(parser);
+		//socket.pipe(newlineTransform).pipe(lexer).pipe(parser);
+		this.sock.pipe(newlineTransform).pipe(lexer).pipe(parser);
 
 		parser.on("untagged", (resp: UntaggedResponse) => {
 			this.resUntagged(resp);
@@ -1851,6 +1854,7 @@ export default class Connection extends EventEmitter {
 	}
 
 	private login() {
+		this.debug("run login() now");
 		let checkedNS = false;
 
 		const reentry = (err?: Error) => {
@@ -2056,6 +2060,8 @@ export default class Connection extends EventEmitter {
 			cb = promote;
 			promote = false;
 		}
+
+		this.debug("enqueue command:", fullcmd);
 
 		const info: ICommand = {
 			cb,
