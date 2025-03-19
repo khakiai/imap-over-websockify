@@ -1,8 +1,8 @@
 import { Buffer } from "buffer";
 import { EventEmitter } from "events";
-import { Socket } from "net";
+//import { Socket } from "net";
 import { clearTimeout, setTimeout } from "timers";
-import * as tls from "tls";
+//import * as tls from "tls";
 import { imap as utf7 } from "utf7";
 import { inspect, types } from "util";
 
@@ -171,7 +171,8 @@ export default class Connection extends EventEmitter {
 	private idle: { started: undefined | number; enabled: boolean };
 	private queue: ICommand[];
 	private newlineTransform: NewlineTranform;
-	private sock: undefined | Socket;
+	//private sock: undefined | Socket;
+	private sock: undefined | any;
 	private tagcount: number;
 	private tmrAuth: undefined | NodeJS.Timeout;
 	private tmrConn: undefined | NodeJS.Timeout;
@@ -225,10 +226,12 @@ export default class Connection extends EventEmitter {
 
 	public connect() {
 		const config = this.config;
-		let socket: Socket;
-		let tlsOptions: tls.ConnectionOptions;
+		//let socket: Socket;
+		let socket: any;
+		//let tlsOptions: tls.ConnectionOptions;
 
-		socket = config.socket || new Socket();
+		//socket = config.socket || new Socket();
+		socket = config.socket;
 		socket.setKeepAlive(true);
 		this.sock = undefined;
 		this.tagcount = 0;
@@ -244,15 +247,16 @@ export default class Connection extends EventEmitter {
 		this.namespaces = undefined;
 		this.state = "disconnected";
 
-		if (config.tls) {
-			tlsOptions = {};
-			tlsOptions.host = config.host;
-			// Host name may be overridden the tlsOptions
-			Object.assign(tlsOptions, config.tlsOptions);
-			tlsOptions.socket = socket;
-		}
+		//if (config.tls) {
+		//	tlsOptions = {};
+		//	tlsOptions.host = config.host;
+		//	// Host name may be overridden the tlsOptions
+		//	Object.assign(tlsOptions, config.tlsOptions);
+		//	tlsOptions.socket = socket;
+		//}
 
 		const onconnect = () => {
+			this.debug("[connection] onconnect()");
 			if (typeof this.tmrConn !== "undefined") {
 				clearTimeout(this.tmrConn);
 			}
@@ -270,7 +274,8 @@ export default class Connection extends EventEmitter {
 
 		if (config.tls) {
 			this.debug("[connection] using implicit TLS");
-			this.sock = tls.connect(tlsOptions, onconnect);
+			//this.sock = tls.connect(tlsOptions, onconnect);
+			throw new Error("not currently supporting TLS init from this connection point");
 		} else {
 			socket.once("connect", onconnect);
 			this.sock = socket;
@@ -1905,7 +1910,8 @@ export default class Connection extends EventEmitter {
 						(this.config.autotls === "required" &&
 							this.serverSupports("LOGINDISABLED")))
 				) {
-					this.starttls();
+					//this.starttls();
+					throw new Error("STARTTLS not currently implemented.");
 					return;
 				}
 
@@ -1958,45 +1964,45 @@ export default class Connection extends EventEmitter {
 		});
 	}
 
-	private starttls() {
-		this.enqueue("STARTTLS", (err) => {
-			if (err) {
-				this.emit("error", err);
-				if (this.sock) {
-					this.sock.end();
-				}
-				return;
-			}
+	//private starttls() {
+	//	this.enqueue("STARTTLS", (err) => {
+	//		if (err) {
+	//			this.emit("error", err);
+	//			if (this.sock) {
+	//				this.sock.end();
+	//			}
+	//			return;
+	//		}
 
-			this.caps = undefined;
-			if (this.sock) {
-				this.sock.removeAllListeners("error");
-			}
+	//		this.caps = undefined;
+	//		if (this.sock) {
+	//			this.sock.removeAllListeners("error");
+	//		}
 
-			const tlsOptions: tls.ConnectionOptions = {};
+	//		const tlsOptions: tls.ConnectionOptions = {};
 
-			tlsOptions.host = this.config.host;
-			// Host name may be overridden the tlsOptions
-			Object.assign(tlsOptions, this.config.tlsOptions);
-			if (this.sock) {
-				tlsOptions.socket = this.sock;
-				this.sock.unpipe(this.newlineTransform);
-			}
+	//		tlsOptions.host = this.config.host;
+	//		// Host name may be overridden the tlsOptions
+	//		Object.assign(tlsOptions, this.config.tlsOptions);
+	//		if (this.sock) {
+	//			tlsOptions.socket = this.sock;
+	//			this.sock.unpipe(this.newlineTransform);
+	//		}
 
-			this.sock = tls.connect(tlsOptions, () => {
-				this.login();
-			});
+	//		this.sock = tls.connect(tlsOptions, () => {
+	//			this.login();
+	//		});
 
-			this.sock.on("error", this.onError);
-			this.sock.on("timeout", this.onSocketTimeout);
-			this.sock.setTimeout(this.config.socketTimeout);
+	//		this.sock.on("error", this.onError);
+	//		this.sock.on("timeout", this.onSocketTimeout);
+	//		this.sock.setTimeout(this.config.socketTimeout);
 
-			// The rest of the piping should still be setup,
-			// so just reattach the socket to the start of
-			// of the pipeline
-			this.sock.pipe(this.newlineTransform);
-		});
-	}
+	//		// The rest of the piping should still be setup,
+	//		// so just reattach the socket to the start of
+	//		// of the pipeline
+	//		this.sock.pipe(this.newlineTransform);
+	//	});
+	//}
 
 	private processQueue() {
 		if (
